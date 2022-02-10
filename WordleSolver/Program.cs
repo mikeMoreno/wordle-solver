@@ -22,7 +22,7 @@
 
             wordToGuess = "heads";
 
-            var allWords = File.ReadAllLines(@"D:\Projects\WordleSolver\WordleSolver\enable_length_5.txt").ToList();
+            var allWords = File.ReadAllLines("enable_length_5.txt").ToList();
 
             var initialGuess = allWords[new Random().Next(allWords.Count)];
 
