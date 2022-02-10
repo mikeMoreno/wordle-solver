@@ -1,11 +1,7 @@
-﻿using System;
-
-namespace WordleSolver
+﻿namespace WordleSolver
 {
     internal class Program
     {
-        static List<LetterInfo> AllLettersGuessed = new List<LetterInfo>();
-
         static void Main(string[] args)
         {
             if (args.Length == 0)
