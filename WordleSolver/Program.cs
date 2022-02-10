@@ -24,18 +24,16 @@ namespace WordleSolver
                 return;
             }
 
-            wordToGuess = "humor";
+            wordToGuess = "heads";
 
-            var allWords = File.ReadAllLines(@"D:\Projects\WordleSolver\WordleSolver\enable_length_5.txt");
+            var allWords = File.ReadAllLines(@"D:\Projects\WordleSolver\WordleSolver\enable_length_5.txt").ToList();
 
-            //var initialGuess = allWords[new Random().Next(allWords.Length)];
-
-            var initialGuess = "third";
+            var initialGuess = allWords[new Random().Next(allWords.Count)];
 
             Console.WriteLine($"The word to guess is: {wordToGuess}");
             Console.WriteLine("I'm going to pretend that I don't know the word...");
 
-            var guessNth = new Dictionary<int, string>()
+            var nthGuess = new Dictionary<int, string>()
             {
                 { 0, "initial" },
                 { 1, "second" },
@@ -54,13 +52,13 @@ namespace WordleSolver
 
             for (int i = 0; i < 6; i++)
             {
-                Console.WriteLine($"My {guessNth[i]} guess is going to be: {currentGuess}");
+                Console.WriteLine($"My {nthGuess[i]} guess is going to be: {currentGuess}");
 
                 var letterGuesses = solver.CheckLetters(wordToGuess, currentGuess);
 
                 var statuses = string.Join(", ", letterGuesses.Select(l => $"({l.Letter}):{l.Status}"));
 
-                Console.WriteLine($"The results of my {guessNth[i]} guess are {statuses}.");
+                Console.WriteLine($"The results of my {nthGuess[i]} guess are {statuses}.");
 
 
 
@@ -69,58 +67,110 @@ namespace WordleSolver
                     Console.WriteLine($"Alright, I got it! The word is: {currentGuess}!");
 
                     solved = true;
+
                     break;
                 }
 
                 if (i < 5)
                 {
                     Console.WriteLine("I'm going to narrow down the words it can possibly be...");
-
                 }
 
+                int currentPossibleWordCount = allWords.Count;
 
+                Console.WriteLine("First I'm going to remove words that have letters that I know are wrong.");
 
-                int currentPossibleWordCount = allWords.Length;
-
-                foreach (var wrongLetterInfo in letterGuesses.Where(l => l.Status == Status.Wrong))
+                foreach (var wrongLetterInfo in letterGuesses.Where(lg => lg.Status == Status.Wrong))
                 {
-                    allWords = allWords.Where(aw => !aw.Contains(wrongLetterInfo.Letter)).ToArray();
-                }
-
-                var remainingWords = new List<string>();
-
-                foreach (var word in allWords)
-                {
-                    bool include = true;
-
-                    for (int j = 0; j < word.Length; j++)
+                    if (!letterGuesses.Any(lg => lg.Letter == wrongLetterInfo.Letter && lg.Status == Status.Misplaced))
                     {
-                        var wLetter = word[j];
-                        var gLetter = letterGuesses[j].Letter;
 
-                        if (word[j] == letterGuesses[j].Letter && letterGuesses[j].Status == Status.Misplaced)
+                        if (!letterGuesses.Any(lg => lg.Letter == wrongLetterInfo.Letter && lg.Status == Status.Correct))
                         {
-                            include = false;
 
-                            break;
+                            Console.WriteLine($"I'm going to remove words with the letter {wrongLetterInfo.Letter}, because they're wrong (and not misplaced).");
+
+                            allWords = allWords.Where(aw => !aw.Contains(wrongLetterInfo.Letter)).ToList();
+                            
+                            File.WriteAllLines("out.txt", allWords);
+                        }
+                    }
+                }
+
+                Console.WriteLine("Next I'm going to remove words that have letters different from the ones I've already seen to be correct.");
+
+                {
+                    var remainingWords = new List<string>();
+
+                    foreach (var word in allWords)
+                    {
+                        bool include = true;
+
+                        for (int j = 0; j < word.Length; j++)
+                        {
+                            var wLetter = word[j];
+                            var gLetter = letterGuesses[j].Letter;
+
+                            if (word[j] != letterGuesses[j].Letter && letterGuesses[j].Status == Status.Correct)
+                            {
+                                //Console.WriteLine($"I'm going to remove the word {word}, because in the {j + 1}th place, it has a '{word[j]}' but I know there should be a '{letterGuesses[j].Letter}' there.");
+                                
+                                include = false;
+
+                                break;
+                            }
+                        }
+
+                        if (include)
+                        {
+                            remainingWords.Add(word);
                         }
                     }
 
-                    if (include)
-                    {
-                        remainingWords.Add(word);
-                    }
+                    allWords = remainingWords.ToList();
                 }
 
-                allWords = remainingWords.ToArray();
+                Console.WriteLine("Finally I'm going to rule out words that have letters in misplaced slots.");
 
+                {
+                    var remainingWords = new List<string>();
+
+                    foreach (var word in allWords)
+                    {
+                        bool include = true;
+
+                        for (int j = 0; j < word.Length; j++)
+                        {
+                            var wLetter = word[j];
+                            var gLetter = letterGuesses[j].Letter;
+
+                            if (word[j] == letterGuesses[j].Letter && letterGuesses[j].Status == Status.Misplaced)
+                            {
+                                Console.WriteLine($"I'm going to remove the word {word}, because in the {j + 1}th place, it has a '{word[j]}' but I've been told that letter is misplaced.");
+
+                                include = false;
+
+                                break;
+                            }
+                        }
+
+                        if (include)
+                        {
+                            remainingWords.Add(word);
+                        }
+                    }
+
+                    allWords = remainingWords.ToList();
+                    File.WriteAllLines("out.txt", allWords);
+
+                }
 
                 if (i < 5)
                 {
-                    Console.WriteLine($"Looks like I managed to rule out {currentPossibleWordCount - allWords.Length} words.");
-                    Console.WriteLine($"Only {allWords.Length} words left. Not bad!");
+                    Console.WriteLine($"Looks like I managed to rule out {currentPossibleWordCount - allWords.Count} words.");
+                    Console.WriteLine($"Only {allWords.Count} words left. Not bad!");
 
-                    if (allWords.Length < 20)
+                    if (allWords.Count < 20)
                     {
                         Console.WriteLine("The words are:");
 
@@ -133,25 +183,13 @@ namespace WordleSolver
                     }
                 }
 
-
-
-
-
-                if (allWords.Length > 1)
-                {
-                    currentGuess = allWords[new Random().Next(allWords.Length)];
-                }
-                else
-                {
-                    break;
-                }
+                currentGuess = allWords[new Random().Next(allWords.Count)];
             }
 
             if (!solved)
             {
                 Console.WriteLine("Looks like I didn't solve it this time :(");
             }
-
         }
     }
 }
