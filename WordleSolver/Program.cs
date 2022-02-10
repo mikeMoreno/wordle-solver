@@ -24,339 +24,134 @@ namespace WordleSolver
                 return;
             }
 
-            wordToGuess = "aaabb";
-            //wordToGuess = "abcde";
-
-            Console.WriteLine($"Word to guess: {wordToGuess}");
+            wordToGuess = "humor";
 
             var allWords = File.ReadAllLines(@"D:\Projects\WordleSolver\WordleSolver\enable_length_5.txt");
 
             //var initialGuess = allWords[new Random().Next(allWords.Length)];
 
+            var initialGuess = "third";
 
+            Console.WriteLine($"The word to guess is: {wordToGuess}");
+            Console.WriteLine("I'm going to pretend that I don't know the word...");
 
-            var initialGuess = "bbbaa";
-
-            //var initialGuess = "edcba";
-
-
-            Console.WriteLine($"Guess: {initialGuess}");
-
-
-            Console.WriteLine(initialGuess);
-
-            foreach (var l in initialGuess)
+            var guessNth = new Dictionary<int, string>()
             {
-                AllLettersGuessed.Add(new LetterInfo(l));
-            }
+                { 0, "initial" },
+                { 1, "second" },
+                { 2, "third" },
+                { 3, "fourth" },
+                { 4, "fifth" },
+                { 5, "sixth" },
 
+            };
 
-            Console.WriteLine("======================");
+            bool solved = false;
 
+            var solver = new Solver();
 
+            var currentGuess = initialGuess;
 
-            //for (int i = 0; i < 6; i++)
+            for (int i = 0; i < 6; i++)
             {
-                CheckLetters(wordToGuess, AllLettersGuessed);
-            }
+                Console.WriteLine($"My {guessNth[i]} guess is going to be: {currentGuess}");
+
+                var letterGuesses = solver.CheckLetters(wordToGuess, currentGuess);
+
+                var statuses = string.Join(", ", letterGuesses.Select(l => $"({l.Letter}):{l.Status}"));
+
+                Console.WriteLine($"The results of my {guessNth[i]} guess are {statuses}.");
 
 
-            foreach (var letterInfo in AllLettersGuessed)
-            {
-                Console.Write($"({letterInfo.Letter}){letterInfo.Status}" + ",");
-            }
 
-
-
-        }
-
-        static List<LetterInfo> CheckLetters(string wordToGuess, List<LetterInfo> letterGuesses)
-        {
-            var wordToGuessLetterCount = new Dictionary<char, int>();
-
-            foreach (var l in wordToGuess)
-            {
-                if (wordToGuessLetterCount.ContainsKey(l))
+                if (letterGuesses.All(l => l.Status == Status.Correct))
                 {
-                    wordToGuessLetterCount[l]++;
+                    Console.WriteLine($"Alright, I got it! The word is: {currentGuess}!");
+
+                    solved = true;
+                    break;
+                }
+
+                if (i < 5)
+                {
+                    Console.WriteLine("I'm going to narrow down the words it can possibly be...");
+
+                }
+
+
+
+                int currentPossibleWordCount = allWords.Length;
+
+                foreach (var wrongLetterInfo in letterGuesses.Where(l => l.Status == Status.Wrong))
+                {
+                    allWords = allWords.Where(aw => !aw.Contains(wrongLetterInfo.Letter)).ToArray();
+                }
+
+                var remainingWords = new List<string>();
+
+                foreach (var word in allWords)
+                {
+                    bool include = true;
+
+                    for (int j = 0; j < word.Length; j++)
+                    {
+                        var wLetter = word[j];
+                        var gLetter = letterGuesses[j].Letter;
+
+                        if (word[j] == letterGuesses[j].Letter && letterGuesses[j].Status == Status.Misplaced)
+                        {
+                            include = false;
+
+                            break;
+                        }
+                    }
+
+                    if (include)
+                    {
+                        remainingWords.Add(word);
+                    }
+                }
+
+                allWords = remainingWords.ToArray();
+
+
+                if (i < 5)
+                {
+                    Console.WriteLine($"Looks like I managed to rule out {currentPossibleWordCount - allWords.Length} words.");
+                    Console.WriteLine($"Only {allWords.Length} words left. Not bad!");
+
+                    if (allWords.Length < 20)
+                    {
+                        Console.WriteLine("The words are:");
+
+                        foreach (var word in allWords)
+                        {
+                            Console.WriteLine(word);
+                        }
+
+                        Console.WriteLine("-------------");
+                    }
+                }
+
+
+
+
+
+                if (allWords.Length > 1)
+                {
+                    currentGuess = allWords[new Random().Next(allWords.Length)];
                 }
                 else
                 {
-                    wordToGuessLetterCount.Add(l, 1);
+                    break;
                 }
             }
 
-
-            var letterGuessCount = new Dictionary<char, int>();
-
-
-            int i = 0;
-
-            foreach (var letterInfo in letterGuesses)
+            if (!solved)
             {
-                var guessingLetter = letterInfo.Letter;
-
-                if (letterInfo.Status != Status.Unknown)
-                {
-                    i++;
-
-                    continue;
-                }
-
-                if (!wordToGuess.Contains(guessingLetter))
-                {
-                    letterInfo.Status = Status.Wrong;
-                }
-                else
-                {
-                    if (wordToGuess[i] == guessingLetter)
-                    {
-
-                        if (letterGuessCount.ContainsKey(guessingLetter))
-                        {
-                            letterGuessCount[guessingLetter]++;
-                        }
-                        else
-                        {
-                            letterGuessCount.Add(guessingLetter, 1);
-                        }
-
-
-
-                        letterInfo.Status = Status.Correct;
-                    }
-                    else
-                    {
-                        //if (letterGuessCount.ContainsKey(guessingLetter))
-                        //{
-                        //    letterGuessCount[guessingLetter]++;
-                        //}
-                        //else
-                        //{
-                        //    letterGuessCount.Add(guessingLetter, 1);
-                        //}
-
-
-                        for (int j = 0; j < wordToGuess.Length; j++)
-                        {
-
-                            //if (j == i)
-                            //{
-                            //    continue;
-                            //}
-
-                            if (wordToGuess[j] != letterGuesses[j].Letter && letterGuesses[j].Letter == guessingLetter)
-                            {
-                                Console.WriteLine($"incorrect guess for {letterGuesses[j].Letter}");
-
-                                letterGuesses[j].Status = Status.Misplaced;
-
-                                if (letterGuessCount.ContainsKey(guessingLetter))
-                                {
-                                    letterGuessCount[guessingLetter]++;
-                                }
-                                else
-                                {
-                                    letterGuessCount.Add(guessingLetter, 1);
-                                }
-                            }
-
-                            //Console.WriteLine($":{wordToGuess[j]} and {letterGuesses[j].Letter}, guessing {guessingLetter}");
-
-                            if (wordToGuess[j] == letterGuesses[j].Letter && letterGuesses[j].Letter == guessingLetter)
-                            {
-                                Console.WriteLine($"correct guess for {letterGuesses[j].Letter}");
-                                letterGuesses[j].Status = Status.Correct;
-
-                                if (letterGuessCount.ContainsKey(guessingLetter))
-                                {
-                                    letterGuessCount[guessingLetter]++;
-                                }
-                                else
-                                {
-                                    letterGuessCount.Add(guessingLetter, 1);
-                                }
-                            }
-                        }
-
-
-                        if (letterGuessCount[guessingLetter] <= wordToGuessLetterCount[guessingLetter])
-                        {
-                            letterInfo.Status = Status.Misplaced;
-                        }
-                        else
-                        {
-                            letterInfo.Status = Status.Wrong;
-                        }
-
-
-                        //
-                    }
-
-
-
-                    var count = wordToGuess.Count(l => l == guessingLetter);
-
-                    if (count == 1)
-                    {
-                        if (wordToGuess[i] == guessingLetter)
-                        {
-                            letterInfo.Status = Status.Correct;
-                        }
-                        else
-                        {
-                            letterInfo.Status = Status.Misplaced;
-                        }
-                    }
-                    else
-                    {
-                        var guessCount = letterGuesses.Count(l => l.Letter == guessingLetter);
-
-                        if (guessCount <= wordToGuessLetterCount[guessingLetter])
-                        {
-                            if (wordToGuess[i] == guessingLetter)
-                            {
-                                letterInfo.Status = Status.Correct;
-                            }
-                            else
-                            {
-                                letterInfo.Status = Status.Misplaced;
-                            }
-                        }
-                        else
-                        {
-                            for (int j = 0; j < wordToGuess.Length; j++)
-                            {
-
-                                Console.WriteLine($":{wordToGuess[j]} and {letterGuesses[j].Letter}, guessing {guessingLetter}");
-
-                                if (wordToGuess[j] == letterGuesses[j].Letter && letterGuesses[j].Letter == guessingLetter)
-                                {
-                                    Console.WriteLine(letterGuesses[j].Letter);
-                                }
-                            }
-
-
-
-
-
-                        }
-
-                        //for(int j = 0; j < wordToGuess.Length; j++)
-                        //{
-                        //    var wordToGuessLetter = wordToGuess[j];
-                        //    var letterToGuessLetter = letterGuesses[j].Letter;
-
-                        //    if(wordToGuessLetter == letterToGuessLetter && letterToGuessLetter == guessingLetter)
-                        //    {
-                        //        if (letterGuessCount.ContainsKey(guessingLetter))
-                        //        {
-                        //            letterGuessCount[guessingLetter]++;
-                        //        }
-                        //        else
-                        //        {
-                        //            letterGuessCount.Add(guessingLetter, 1);
-                        //        }
-
-                        //        letterGuesses[j].Status = Status.Correct;
-                        //    }
-                        //}
-
-                        //if (letterGuessCount[guessingLetter] <= wordToGuessLetterCount[guessingLetter])
-                        //{
-                        //    if (wordToGuess[i] == guessingLetter)
-                        //    {
-                        //        letterInfo.Status = Status.Correct;
-                        //    }
-                        //    else
-                        //    {
-                        //        letterInfo.Status = Status.Misplaced;
-                        //    }
-
-                        //    letterGuessCount[guessingLetter]++;
-                        //}
-                        //else
-                        //{
-                        //    letterInfo.Status = Status.Wrong;
-                        //}
-                    }
-                }
-
-                i++;
+                Console.WriteLine("Looks like I didn't solve it this time :(");
             }
 
-            return letterGuesses;
-        }
-
-        static List<char> GetMisplacedLetters(string wordToGuess, string guess)
-        {
-            var lettersGuessed = new HashSet<char>();
-
-            var misplacedLetters = new List<char>();
-
-            foreach (var letter in guess)
-            {
-                lettersGuessed.Add(letter);
-
-                if (!wordToGuess.Contains(letter))
-                {
-                    continue;
-                }
-
-                var count = wordToGuess.Count(l => l == letter);
-
-                if (count == 1)
-                {
-                    if (wordToGuess.IndexOf(letter) == guess.IndexOf(letter))
-                    {
-                        continue;
-                    }
-                    else
-                    {
-                        misplacedLetters.Add(letter);
-                    }
-                }
-                else
-                {
-                    if (!lettersGuessed.Contains(letter))
-                    {
-
-                    }
-                    else
-                    {
-
-                    }
-                }
-            }
-
-            return misplacedLetters;
-        }
-
-
-        class LetterInfo
-        {
-            public Status Status { get; set; }
-
-            public char Letter { get; set; }
-
-            public LetterInfo(char l)
-            {
-                Letter = l;
-                Status = Status.Unknown;
-            }
-
-            //public override string ToString()
-            //{
-            //    return $"{Status}";
-            //}
-        }
-
-        enum Status
-        {
-            Wrong,
-            Misplaced,
-            Correct,
-            Unknown,
         }
     }
 }
