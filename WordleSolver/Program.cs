@@ -233,11 +233,21 @@
             Console.WriteLine("=====================");
         }
 
-        private static string Option(string message)
+        private static string Option(string message, string defaultAnswer = null, bool lowercaseAnswer = false)
         {
             Chat(message);
 
             var option = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(option))
+            {
+                return defaultAnswer;
+            }
+
+            if (lowercaseAnswer)
+            {
+                return option.ToLower();
+            }
 
             return option;
         }
@@ -271,20 +281,68 @@
 
             Chatln("Let's begin!");
 
+            string theGuess = MakeGuess(allWords);
+
+            Chatln($"Ok, so we're going with '{theGuess}'.");
+
+            Chatln($"Enter that word into the Wordle site now, and press Enter when you're done.");
+
+            _ = Option("I'll be waiting...");
+
+            Chatln($"Great. Now you need to tell me the results we received from Wordle.");
+
+            Chatln($"Our guess was '{theGuess}'. So, for example, if the first letter '{theGuess[0]}' was (M)isplaced, you should enter an 'M', without single quotes.");
+            Chatln($"If the second letter '{theGuess[1]}' was (C)orrect, enter a 'C'. Again, without single quotes.");
+            Chatln("For a letter that was completely (W)rong, enter a 'W'.");
+            Chatln("You're going to end up with a string of letters that looks something like 'MCCWM'.");
+            Chatln("Do make sure to double-check your input :)");
+
+
+            var result = GetResults();
+
+        }
+
+        private static string GetResults()
+        {
+            bool resultsEntered;
+
+            string results;
+
+            do
+            {
+                do
+                {
+                    results = Option("Enter the results now: ");
+
+                    resultsEntered = IsValidResults(results);
+                } while (!resultsEntered);
+
+                var option = Option($"Is '{results}' correct? [Y/n]: ", defaultAnswer: "y", lowercaseAnswer: true);
+
+                switch (option)
+                {
+                    case "y":
+                        return results;
+                    case "n":
+                        resultsEntered = false;
+                        break;
+                    default:
+                        Chatln("Choose an option: y or n.");
+                        break;
+                }
+
+            } while (!resultsEntered);
+
+            return results;
+        }
+
+        private static string MakeGuess(List<string> totalWordList)
+        {
             Chatln("Would you like to guess the first word, or shall I?");
 
             Chatln("[1]: I'll pick a word to guess.");
             Chatln("[2]: You can pick.");
 
-            string theGuess = MakeGuess(allWords);
-
-
-
-
-        }
-
-        private static string MakeGuess(List<string> totalWordList)
-        {
             bool guessChosen = false;
 
             string theGuess = null;
@@ -299,6 +357,7 @@
                         do
                         {
                             theGuess = Option("Alright, tell me the word: ");
+                            theGuess = theGuess?.ToLower();
 
                             guessChosen = IsValidGuess(theGuess, totalWordList);
 
@@ -342,7 +401,7 @@
             {
                 theGuess = wordList[new Random().Next(wordList.Count)];
 
-                Chatln($"I'm going to guess {theGuess}. Is that ok with you?");
+                Chatln($"I'm going to guess '{theGuess}'. Is that ok with you?");
 
                 Chatln("[1]: Let's go with it.");
                 Chatln("[2]: I don't like it. Pick a different word.");
@@ -379,7 +438,7 @@
             if (guess.Length != 5)
             {
                 Chatln("Your guess must be exactly 5 letters long. Repeated letters are allowed.");
-                
+
                 return false;
             }
 
@@ -390,11 +449,40 @@
                 return false;
             }
 
-            if(filteredWordList != null && !filteredWordList.Contains(guess.ToLower()))
+            if (filteredWordList != null && !filteredWordList.Contains(guess.ToLower()))
             {
-                Chatln("We already ruled out that word at some point, there's no way it can be the answer. Pick another one!");
+                Chatln($"We already ruled out '{guess}' at some point, there's no way it can be the answer. Pick another one!");
 
                 return false;
+            }
+
+            return true;
+        }
+
+        private static bool IsValidResults(string result)
+        {
+            if (string.IsNullOrWhiteSpace(result))
+            {
+                Chatln("You need to enter the results like I described.");
+
+                return false;
+            }
+
+            if (result.Length != 5)
+            {
+                Chatln("The results must be exactly 5 letters long.");
+
+                return false;
+            }
+
+            foreach (var c in result)
+            {
+                if (c != 'C' && c != 'M' && c != 'W')
+                {
+                    Chatln("M's, W's, and C's only please.");
+
+                    return false;
+                }
             }
 
             return true;
