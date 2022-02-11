@@ -4,6 +4,46 @@
     {
         static void Main(string[] args)
         {
+            Chatln("Shall we play a game?");
+
+            Header();
+
+            Chatln("[1]: Think of a word for me to guess.");
+            Chatln("[2]: Play Wordle cooperatively with me.");
+            Chatln("[3]: Exit.");
+
+            while (true)
+            {
+                Chat("Choose an option: ");
+
+                var option = Option("Choose an option: ");
+
+                switch (option)
+                {
+                    case "1":
+                        HumanVsComputer();
+
+                        return;
+                    case "2":
+                        Coop();
+
+                        return;
+                    case "3":
+                        Chatln("Goodbye!");
+
+                        return;
+                    default:
+                        Chatln("Choose an option: 1, 2, or 3.");
+                        break;
+                }
+            }
+
+
+
+            return;
+
+
+
             if (args.Length == 0)
             {
                 Console.WriteLine("Enter a word.");
@@ -87,7 +127,7 @@
                             Console.WriteLine($"I'm going to remove words with the letter {wrongLetterInfo.Letter}, because they're wrong (and not misplaced).");
 
                             allWords = allWords.Where(aw => !aw.Contains(wrongLetterInfo.Letter)).ToList();
-                            
+
                             File.WriteAllLines("out.txt", allWords);
                         }
                     }
@@ -110,7 +150,7 @@
                             if (word[j] != letterGuesses[j].Letter && letterGuesses[j].Status == Status.Correct)
                             {
                                 //Console.WriteLine($"I'm going to remove the word {word}, because in the {j + 1}th place, it has a '{word[j]}' but I know there should be a '{letterGuesses[j].Letter}' there.");
-                                
+
                                 include = false;
 
                                 break;
@@ -186,6 +226,178 @@
             {
                 Console.WriteLine("Looks like I didn't solve it this time :(");
             }
+        }
+
+        private static void Header()
+        {
+            Console.WriteLine("=====================");
+        }
+
+        private static string Option(string message)
+        {
+            Chat(message);
+
+            var option = Console.ReadLine();
+
+            return option;
+        }
+
+        private static void Chat(string message)
+        {
+            Console.Write(message);
+        }
+
+        private static void Chatln(string message)
+        {
+            Console.WriteLine(message);
+        }
+
+        private static void HumanVsComputer()
+        {
+            Header();
+            Header();
+            Header();
+            Header();
+        }
+
+        private static void Coop()
+        {
+            var allWords = File.ReadAllLines("enable_length_5.txt").ToList();
+
+            Header();
+            Header();
+            Header();
+            Header();
+
+            Chatln("Let's begin!");
+
+            Chatln("Would you like to guess the first word, or shall I?");
+
+            Chatln("[1]: I'll pick a word to guess.");
+            Chatln("[2]: You can pick.");
+
+            string theGuess = MakeGuess(allWords);
+
+
+
+
+        }
+
+        private static string MakeGuess(List<string> totalWordList)
+        {
+            bool guessChosen = false;
+
+            string theGuess = null;
+
+            do
+            {
+                var option = Option("Choose an option: ");
+
+                switch (option)
+                {
+                    case "1":
+                        do
+                        {
+                            theGuess = Option("Alright, tell me the word: ");
+
+                            guessChosen = IsValidGuess(theGuess, totalWordList);
+
+                        } while (!guessChosen);
+
+                        break;
+                    case "2":
+
+                        theGuess = LetComputerPickWord(totalWordList);
+
+                        guessChosen = true;
+
+                        break;
+                    default:
+                        Chatln("Choose an option: 1 or 2.");
+                        break;
+                }
+
+            } while (!guessChosen);
+
+
+            if (theGuess == null)
+            {
+                Chatln("Oh no...something has gone...very wrong... X_X");
+
+                Environment.Exit(1);
+            }
+
+            return theGuess;
+        }
+
+        private static string LetComputerPickWord(List<string> wordList)
+        {
+            Chatln("Sounds good. I'll pick a word.");
+
+            string theGuess;
+
+            var finished = false;
+
+            do
+            {
+                theGuess = wordList[new Random().Next(wordList.Count)];
+
+                Chatln($"I'm going to guess {theGuess}. Is that ok with you?");
+
+                Chatln("[1]: Let's go with it.");
+                Chatln("[2]: I don't like it. Pick a different word.");
+
+                var option = Option("Choose an option: ");
+
+                switch (option)
+                {
+                    case "1":
+                        finished = true;
+                        break;
+                    case "2":
+                        finished = false;
+                        break;
+                    default:
+                        Chatln("Choose an option: 1 or 2.");
+                        break;
+                }
+
+            } while (!finished);
+
+            return theGuess;
+        }
+
+        private static bool IsValidGuess(string guess, List<string> totalWordList, List<string> filteredWordList = null)
+        {
+            if (string.IsNullOrWhiteSpace(guess))
+            {
+                Chatln("You need to enter a word.");
+
+                return false;
+            }
+
+            if (guess.Length != 5)
+            {
+                Chatln("Your guess must be exactly 5 letters long. Repeated letters are allowed.");
+                
+                return false;
+            }
+
+            if (!totalWordList.Contains(guess.ToLower()))
+            {
+                Chatln("That doesn't appear to be a real word.");
+
+                return false;
+            }
+
+            if(filteredWordList != null && !filteredWordList.Contains(guess.ToLower()))
+            {
+                Chatln("We already ruled out that word at some point, there's no way it can be the answer. Pick another one!");
+
+                return false;
+            }
+
+            return true;
         }
     }
 }
