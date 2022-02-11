@@ -2,7 +2,7 @@
 {
     internal class Program
     {
-        static bool ThinkOutLoud = true;
+        static bool ThinkOutLoud = false;
 
         static void Main(string[] args)
         {
@@ -292,6 +292,7 @@
             Chatln("Let's begin!");
 
             var firstGuess = true;
+            var solved = false;
 
             var nthGuess = new Dictionary<int, string>()
             {
@@ -330,7 +331,9 @@
 
                 if (letterGuesses.All(l => l.Status == Status.Correct))
                 {
-                    Console.WriteLine($"Alright, we got it! The word is: {theGuess}!");
+                    Chatln($"Alright, we got it! The word is: {theGuess}!");
+
+                    solved = true;
 
                     break;
                 }
@@ -450,7 +453,24 @@
                     filteredWords = remainingWords.ToList();
                 }
 
+                if (filteredWords.Count == 0)
+                {
+                    Chatln("I don't know how we managed to do this, but it seems we've ruled out every single word in the English language! :D");
+                    Chatln("You're on your own now. Good luck!");
+                    Environment.Exit(1);
+                }
+
+                if (i < 5)
+                {
+                    Chatln("All done. I'm ready for another guess.");
+                }
+
                 firstGuess = false;
+            }
+
+            if (!solved)
+            {
+                Chatln("Looks like we didn't solve it this time :(");
             }
         }
 
