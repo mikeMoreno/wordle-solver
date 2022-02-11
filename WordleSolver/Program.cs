@@ -273,6 +273,9 @@
 
         private static void HumanVsComputer()
         {
+            Console.WriteLine("This feature isn't ready yet!");
+            return;
+
             Header();
             Header();
             Header();
