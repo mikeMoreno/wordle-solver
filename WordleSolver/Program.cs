@@ -2,6 +2,8 @@
 {
     internal class Program
     {
+        static bool ThinkOutLoud = true;
+
         static void Main(string[] args)
         {
             Chatln("Shall we play a game?");
@@ -77,7 +79,6 @@
                 { 3, "fourth" },
                 { 4, "fifth" },
                 { 5, "sixth" },
-
             };
 
             bool solved = false;
@@ -262,6 +263,14 @@
             Console.WriteLine(message);
         }
 
+        private static void Thinkln(string message)
+        {
+            if (ThinkOutLoud)
+            {
+                Chatln(message);
+            }
+        }
+
         private static void HumanVsComputer()
         {
             Header();
@@ -273,6 +282,7 @@
         private static void Coop()
         {
             var allWords = File.ReadAllLines("enable_length_5.txt").ToList();
+            var filteredWords = new List<string>(allWords);
 
             Header();
             Header();
@@ -281,25 +291,161 @@
 
             Chatln("Let's begin!");
 
-            string theGuess = MakeGuess(allWords);
+            var firstGuess = true;
 
-            Chatln($"Ok, so we're going with '{theGuess}'.");
+            var nthGuess = new Dictionary<int, string>()
+            {
+                { 0, "first" },
+                { 1, "second" },
+                { 2, "third" },
+                { 3, "fourth" },
+                { 4, "fifth" },
+                { 5, "sixth" },
+            };
 
-            Chatln($"Enter that word into the Wordle site now, and press Enter when you're done.");
+            for (int i = 0; i < 6; i++)
+            {
+                string theGuess = MakeGuess(allWords, nthGuess[i], filteredWords);
 
-            _ = Option("I'll be waiting...");
+                Chatln($"Ok, so we're going with '{theGuess}'.");
 
-            Chatln($"Great. Now you need to tell me the results we received from Wordle.");
+                Chatln($"Enter that word into the Wordle site now, and press Enter when you're done.");
 
-            Chatln($"Our guess was '{theGuess}'. So, for example, if the first letter '{theGuess[0]}' was (M)isplaced, you should enter an 'M', without single quotes.");
-            Chatln($"If the second letter '{theGuess[1]}' was (C)orrect, enter a 'C'. Again, without single quotes.");
-            Chatln("For a letter that was completely (W)rong, enter a 'W'.");
-            Chatln("You're going to end up with a string of letters that looks something like 'MCCWM'.");
-            Chatln("Do make sure to double-check your input :)");
+                _ = Option("I'll be waiting...");
 
+                Chatln($"Great. Now you need to tell me the results we received from Wordle.");
 
-            var result = GetResults();
+                if (firstGuess)
+                {
+                    Chatln($"Our guess was '{theGuess}'. So, for example, if the first letter '{theGuess[0]}' was (M)isplaced, you should enter an 'M', without single quotes.");
+                    Chatln($"If the second letter '{theGuess[1]}' was (C)orrect, enter a 'C'. Again, without single quotes.");
+                    Chatln("For a letter that was completely (W)rong, enter a 'W'.");
+                    Chatln("You're going to end up with a string of letters that looks something like 'MCCWM'.");
+                    Chatln("Do make sure to double-check your input :)");
+                }
 
+                var results = GetResults();
+
+                var letterGuesses = GetLetterGuesses(theGuess, results);
+
+                if (letterGuesses.All(l => l.Status == Status.Correct))
+                {
+                    Console.WriteLine($"Alright, we got it! The word is: {theGuess}!");
+
+                    break;
+                }
+
+                Chatln("Based on these results, I'm going to narrow down the words it can possibly be...");
+
+                int currentPossibleWordCount = filteredWords.Count;
+
+                Chatln("First I'm going to remove words that have letters that we know are wrong.");
+
+                foreach (var wrongLetterInfo in letterGuesses.Where(lg => lg.Status == Status.Wrong))
+                {
+                    if (!letterGuesses.Any(lg => lg.Letter == wrongLetterInfo.Letter && lg.Status == Status.Misplaced))
+                    {
+                        if (!letterGuesses.Any(lg => lg.Letter == wrongLetterInfo.Letter && lg.Status == Status.Correct))
+                        {
+                            Thinkln($"I'm going to remove words with the letter {wrongLetterInfo.Letter}, because they're wrong (and not misplaced).");
+
+                            filteredWords = filteredWords.Where(aw => !aw.Contains(wrongLetterInfo.Letter)).ToList();
+                        }
+                    }
+                }
+
+                Chatln("Next I'm going to remove words that have letters different from the ones we've already seen to be correct.");
+
+                {
+                    var remainingWords = new List<string>();
+
+                    foreach (var word in filteredWords)
+                    {
+                        bool include = true;
+
+                        for (int j = 0; j < word.Length; j++)
+                        {
+                            var wLetter = word[j];
+                            var gLetter = letterGuesses[j].Letter;
+
+                            if (word[j] != letterGuesses[j].Letter && letterGuesses[j].Status == Status.Correct)
+                            {
+                                include = false;
+
+                                break;
+                            }
+                        }
+
+                        if (include)
+                        {
+                            remainingWords.Add(word);
+                        }
+                    }
+
+                    filteredWords = remainingWords.ToList();
+                }
+
+                Chatln("Finally I'm going to rule out words that have letters in misplaced slots.");
+
+                {
+                    var remainingWords = new List<string>();
+
+                    foreach (var word in filteredWords)
+                    {
+                        bool include = true;
+
+                        for (int j = 0; j < word.Length; j++)
+                        {
+                            var wLetter = word[j];
+                            var gLetter = letterGuesses[j].Letter;
+
+                            if (word[j] == letterGuesses[j].Letter && letterGuesses[j].Status == Status.Misplaced)
+                            {
+                                Thinkln($"I'm going to remove the word {word}, because in the {j + 1}th place, it has a '{word[j]}' but we've been told that letter is misplaced.");
+
+                                include = false;
+
+                                break;
+                            }
+                        }
+
+                        if (include)
+                        {
+                            remainingWords.Add(word);
+                        }
+                    }
+
+                    filteredWords = remainingWords.ToList();
+                }
+
+                firstGuess = false;
+            }
+        }
+
+        private static List<LetterInfo> GetLetterGuesses(string theGuess, string results)
+        {
+            var letterInfos = new List<LetterInfo>();
+
+            for (int i = 0; i < theGuess.Length; i++)
+            {
+                letterInfos.Add(new LetterInfo(theGuess[i])
+                {
+                    Status = ConvertResultLetterToStatus(results[i]),
+                });
+            }
+
+            return letterInfos;
+        }
+
+        private static Status ConvertResultLetterToStatus(char c)
+        {
+            return c switch
+            {
+                'C' => Status.Correct,
+                'W' => Status.Wrong,
+                'M' => Status.Misplaced,
+                _ => throw new InvalidOperationException("Oh no oh no oh no Michael messed something up X_X"),
+            };
         }
 
         private static string GetResults()
@@ -336,9 +482,9 @@
             return results;
         }
 
-        private static string MakeGuess(List<string> totalWordList)
+        private static string MakeGuess(List<string> totalWordList, string ordinal, List<string> filteredWords)
         {
-            Chatln("Would you like to guess the first word, or shall I?");
+            Chatln($"Would you like to guess the {ordinal} word, or shall I?");
 
             Chatln("[1]: I'll pick a word to guess.");
             Chatln("[2]: You can pick.");
@@ -359,14 +505,14 @@
                             theGuess = Option("Alright, tell me the word: ");
                             theGuess = theGuess?.ToLower();
 
-                            guessChosen = IsValidGuess(theGuess, totalWordList);
+                            guessChosen = IsValidGuess(theGuess, totalWordList, filteredWords);
 
                         } while (!guessChosen);
 
                         break;
                     case "2":
 
-                        theGuess = LetComputerPickWord(totalWordList);
+                        theGuess = LetComputerPickWord(filteredWords);
 
                         guessChosen = true;
 
