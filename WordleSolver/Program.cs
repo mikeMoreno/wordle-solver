@@ -385,6 +385,38 @@
                     filteredWords = remainingWords.ToList();
                 }
 
+                Chatln("Next I'm going to remove words that are missing letters we know are misplaced.");
+
+                {
+                    var remainingWords = new List<string>();
+
+                    foreach (var word in filteredWords)
+                    {
+                        bool include = true;
+
+                        var misplacedLetters = letterGuesses.Where(l => l.Status == Status.Misplaced);
+
+                        foreach (var misplacedLetterInfo in misplacedLetters)
+                        {
+                            if (!word.Contains(misplacedLetterInfo.Letter))
+                            {
+                                Thinkln($"I'm going to remove the word '{word}', because it doesn't contain '{misplacedLetterInfo.Letter}', but we've been told that letter exists in the word.");
+
+                                include = false;
+
+                                break;
+                            }
+                        }
+
+                        if (include)
+                        {
+                            remainingWords.Add(word);
+                        }
+                    }
+
+                    filteredWords = remainingWords.ToList();
+                }
+
                 Chatln("Finally I'm going to rule out words that have letters in misplaced slots.");
 
                 {
